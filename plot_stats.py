@@ -1,111 +1,78 @@
 import os
-import shutil
-import m5
-from m5.objects import *
+import glob
+import argparse
+import matplotlib.pyplot as plt
 
-m5.util.addToPath("/opt/ACA2025/gem5/configs/")
-from caches import *
-from common import SimpleOpts
+def extract_stats(path):
+    stats = {}
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if len(line.split()) < 2:
+                continue
+            key, value = line.split()[:2]
+            try:
+                stats[key] = float(value)
+            except ValueError:
+                continue
+    return stats
 
-# Default binary
-thispath = os.path.dirname(os.path.realpath(__file__))
-default_binary = os.path.join(
-    thispath,
-    "/opt/ACA2025/gem5/",
-    "tests/test-progs/hello/bin/x86/linux/hello",
-)
+def main():
+    parser = argparse.ArgumentParser(description="Plot gem5 stats by key.")
+    parser.add_argument("stat_key", type=str, nargs="?", help="Stat key to plot (e.g. system.cpu.ipc)")
+    parser.add_argument("--path_dir", type=str, default=".", help="Directory containing stats files")
+    parser.add_argument("--list_keys", action="store_true", help="List available stat keys and exit")
+    args = parser.parse_args()
 
-# CLI options
-SimpleOpts.add_option("binary", nargs="?", default=default_binary)
-SimpleOpts.add_option("--clock", default="1GHz", help="CPU clock rate")
-SimpleOpts.add_option("--cpu_type", default="X86TimingSimpleCPU", help="CPU model")
-SimpleOpts.add_option("--out_dir", default="two-level-automated", help="Output directory for stats")
+    path_files = os.path.join(args.path_dir, "stats_*.txt")
+    files = sorted(glob.glob(path_files))
 
-# Parse args
-args = SimpleOpts.parse_args()
+    if not files:
+        print(f"❌ No stats files found in: {args.path_dir}")
+        return
 
-# Build system
-system = System()
-system.clk_domain = SrcClockDomain()
-system.clk_domain.clock = args.clock
-system.clk_domain.voltage_domain = VoltageDomain()
-system.mem_mode = "timing"
-system.mem_ranges = [AddrRange("512MB")]
+    all_stats = []
+    for fpath in files:
+        stats = extract_stats(fpath)
+        stats["__file__"] = os.path.basename(fpath)
+        all_stats.append(stats)
 
-# CPU
-cpu_class = eval(args.cpu_type)
-system.cpu = cpu_class()
+    if args.list_keys:
+        all_keys = sorted(set().union(*[s.keys() for s in all_stats if s]))
+        print("✅ Available stat keys:")
+        for k in all_keys:
+            print(" ", k)
+        return
 
-# L1 caches
-system.cpu.icache = L1ICache(args)
-system.cpu.dcache = L1DCache(args)
-system.cpu.icache.connectCPU(system.cpu)
-system.cpu.dcache.connectCPU(system.cpu)
+    key = args.stat_key
+    if not key:
+        print("❌ You must specify a stat key or use --list_keys.")
+        return
 
-# L2 interconnect
-system.l2bus = L2XBar()
-system.cpu.icache.connectBus(system.l2bus)
-system.cpu.dcache.connectBus(system.l2bus)
+    values = []
+    labels = []
+    for s in all_stats:
+        if key in s:
+            values.append(s[key])
+            labels.append(s["__file__"])
+        else:
+            print(f"⚠️ Stat key '{key}' not found in {s['__file__']}")
 
-# L2 cache
-system.l2cache = L2Cache(args)
-system.l2cache.connectCPUSideBus(system.l2bus)
+    if not values:
+        print(f"❌ Stat key not found in any files: {key}")
+        return
 
-# Memory bus
-system.membus = SystemXBar()
-system.l2cache.connectMemSideBus(system.membus)
+    plt.figure(figsize=(10,6))
+    plt.bar(labels, values)
+    plt.title(f"{key} across configurations")
+    plt.ylabel(key)
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    out_name = f"plot_{key.replace('.', '_')}.png"
+    plt.savefig(out_name)
+    print(f"✅ Plot saved to {out_name}")
 
-# Interrupts
-system.cpu.createInterruptController()
-system.cpu.interrupts[0].pio = system.membus.mem_side_ports
-system.cpu.interrupts[0].int_requestor = system.membus.cpu_side_ports
-system.cpu.interrupts[0].int_responder = system.membus.mem_side_ports
-
-# System port
-system.system_port = system.membus.cpu_side_ports
-
-# Memory controller
-system.mem_ctrl = MemCtrl()
-system.mem_ctrl.dram = DDR3_1600_8x8()
-system.mem_ctrl.dram.range = system.mem_ranges[0]
-system.mem_ctrl.port = system.membus.mem_side_ports
-
-# Binary + process
-system.workload = SEWorkload.init_compatible(args.binary)
-process = Process()
-process.cmd = [args.binary]
-system.cpu.workload = process
-system.cpu.createThreads()
-
-# Simulate
-root = Root(full_system=False, system=system)
-m5.instantiate()
-print(f"Starting simulation...")
-m5.stats.reset()
-exit_event = m5.simulate()
-print(f"Exiting @ tick {m5.curTick()} because {exit_event.getCause()}")
-m5.stats.dump()
-
-# Save stats file using param values
-def get_attr(name, fallback):
-    return getattr(args, name, fallback) or fallback
-
-l1i = get_attr("l1i_size", "default")
-l1d = get_attr("l1d_size", "default")
-l2  = get_attr("l2_size",  "default")
-clk = get_attr("clock", "default")
-cpu = get_attr("cpu_type", "default")
-out_dir = args.out_dir
-
-if not os.path.exists(out_dir):
-    os.makedirs(out_dir)
-
-stats_file = f"stats_{cpu}_L1I{l1i}_L1D{l1d}_L2{l2}_{clk}.txt".replace(" ", "").replace(",", "")
-stats_path = os.path.join(out_dir, stats_file)
-
-if os.path.exists("m5out/stats.txt"):
-    print(f"Copying stats to: {stats_path}")
-    shutil.copyfile("m5out/stats.txt", stats_path)
-    print(f"✅ Stats copied to: {stats_path}")
-else:
-    print("❌ m5out/stats.txt not found. Cannot copy stats.")
+if __name__ == "__main__":
+    main()
