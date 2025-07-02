@@ -24,7 +24,10 @@ apptainer shell \
 ```
 ### Run Simulations
 Note: All commands assume you're inside ACA2025_gem5.
+First, you need to compile the application you want to run on the simulated system:
+```gcc -o hello_world kernels/hello_world.c```
 
+now that you have your binary, you can run your system:
 ```bash
 /opt/ACA2025/gem5/build/X86/gem5.debug \
   simple.py \
