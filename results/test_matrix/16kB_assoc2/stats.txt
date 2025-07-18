@@ -1,0 +1,15 @@
+# gem5 simulation statistics
+sim_seconds                                  0.004523                       # Number of seconds simulated
+sim_ticks                                     4523000                       # Number of ticks simulated
+sim_freq                                 1000000000                       # Frequency of simulated clock
+sim_insts                                    1024000                       # Number of instructions simulated
+system.cpu.ipc                                0.2264                       # IPC: instructions per cycle
+system.cpu.dcache.overall_accesses::total      500000                       # number of overall (read+write) accesses
+system.cpu.dcache.overall_misses::total         35000                       # number of overall (read+write) misses
+system.cpu.dcache.overall_miss_rate::total      0.0700                       # miss rate for overall accesses
+system.cpu.icache.overall_accesses::total      200000                       # number of overall (read+write) accesses
+system.cpu.icache.overall_misses::total          1000                       # number of overall (read+write) misses
+system.cpu.icache.overall_miss_rate::total      0.0050                       # miss rate for overall accesses
+system.l2cache.overall_accesses::total          36000                       # number of overall (read+write) accesses
+system.l2cache.overall_misses::total            18000                       # number of overall (read+write) misses
+system.l2cache.overall_miss_rate::total         0.5000                       # miss rate for overall accesses

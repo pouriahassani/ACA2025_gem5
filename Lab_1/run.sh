@@ -1,6 +1,0 @@
-/opt/ACA2025/gem5/build/X86/gem5.debug   two_level_automated.py   --cpu_type=X86TimingSimpleCPU    --clock=2GHz   --l1i_size=32kB --l1d_size=1kB   --l2_size=512kB   kernel2
-/opt/ACA2025/gem5/build/X86/gem5.debug   two_level_automated.py   --cpu_type=X86TimingSimpleCPU    --clock=2GHz   --l1i_size=32kB --l1d_size=2kB   --l2_size=512kB   kernel2
-/opt/ACA2025/gem5/build/X86/gem5.debug   two_level_automated.py   --cpu_type=X86TimingSimpleCPU    --clock=2GHz   --l1i_size=32kB --l1d_size=4kB   --l2_size=512kB   kernel2
-/opt/ACA2025/gem5/build/X86/gem5.debug   two_level_automated.py   --cpu_type=X86TimingSimpleCPU    --clock=2GHz   --l1i_size=32kB --l1d_size=8kB   --l2_size=512kB   kernel2
-/opt/ACA2025/gem5/build/X86/gem5.debug   two_level_automated.py   --cpu_type=X86TimingSimpleCPU    --clock=2GHz   --l1i_size=32kB  --l1d_size=16kB   --l2_size=512kB   kernel2
-/opt/ACA2025/gem5/build/X86/gem5.debug   two_level_automated.py   --cpu_type=X86TimingSimpleCPU    --clock=2GHz   --l1i_size=32kB  --l1d_size=32kB   --l2_size=512kB   kernel2
